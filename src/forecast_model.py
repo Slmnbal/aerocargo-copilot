@@ -5,6 +5,8 @@ import os
 # dosya backend'inde kalıyor.
 os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
 
+import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import mlflow
@@ -12,6 +14,10 @@ import numpy as np
 import pandas as pd
 
 PROJE_KOKU = Path(__file__).resolve().parent.parent
+
+# monitor_model.py'nin veri drift analizinde kullandığı istek/tahmin geçmişi.
+# agent.py'deki agent_log.jsonl ile aynı JSONL deseni; .gitignore'da (data/logs/).
+LOG_DOSYASI = PROJE_KOKU / "data" / "logs" / "forecast_log.jsonl"
 
 _route_df = pd.read_csv(PROJE_KOKU / "data" / "route_features.csv")
 # origin_popularity/destination_popularity, data_prep.py'de "leave-one-out" olarak
@@ -24,6 +30,22 @@ _destination_toplam = _route_df.groupby("destination")["flight_count"].sum()
 # "champion" alias'ı train_forecast_model.py tarafından, en düşük MAE'ye sahip modele
 # otomatik atanıyor (bkz. o dosyadaki not) — burada hep o versiyonu yüklüyoruz.
 _model = mlflow.pyfunc.load_model("models:/aerocargo_forecast_model@champion")
+
+
+def _log_kaydet(origin, destination, days_per_week, origin_pop, destination_pop, tahmin, rota_mevcut):
+    LOG_DOSYASI.parent.mkdir(parents=True, exist_ok=True)
+    kayit = {
+        "zaman": datetime.now(timezone.utc).isoformat(),
+        "origin": origin,
+        "destination": destination,
+        "days_per_week": float(days_per_week),
+        "origin_popularity": float(origin_pop),
+        "destination_popularity": float(destination_pop),
+        "tahmini_ucus_sayisi": tahmin,
+        "rota_veri_setinde_mevcut": rota_mevcut,
+    }
+    with open(LOG_DOSYASI, "a", encoding="utf-8") as f:
+        f.write(json.dumps(kayit, ensure_ascii=False) + "\n")
 
 
 def talep_tahmin_et(origin: str, destination: str, days_per_week: float | None = None) -> dict:
@@ -65,6 +87,11 @@ def talep_tahmin_et(origin: str, destination: str, days_per_week: float | None =
     # tahmini gerçek uçuş sayısına çevirmek için expm1 ile tersini alıyoruz.
     log_tahmin = _model.predict(X)[0]
     tahmini_ucus_sayisi = max(0, round(float(np.expm1(log_tahmin))))
+
+    _log_kaydet(
+        origin, destination, days_per_week, origin_pop, destination_pop,
+        tahmini_ucus_sayisi, not mevcut_rota.empty,
+    )
 
     return {
         "tahmini_ucus_sayisi": tahmini_ucus_sayisi,
