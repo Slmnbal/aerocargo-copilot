@@ -79,10 +79,16 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
   - **Sonuç:** ilk kurulumda modeli container İÇİNDE eğitmek gerekiyor (`docker compose run --rm backend python src/train_forecast_model.py`, sonra `docker compose restart backend`) — named volume boş başlıyor, host'un `mlruns/`'undan miras almıyor. Bu adım README'de belgelendi.
 - Tüm akış (build, container-içi eğitim, `/saglik`+`/soru`+`/forecast`, frontend statik servis, CORS, host Ollama'ya erişim) uçtan uca test edildi.
 
+**Seviye 5 Görev 3 — GitHub Actions ile CI (tamamlandı):**
+- `.github/workflows/ci.yml` — iki job: `backend` (ruff + pytest) ve `frontend` (oxlint + tsc/vite build). Push/PR'da `main`'e otomatik tetikleniyor.
+- `requirements-dev.txt` — CI'nin backend job'ı `requirements.txt`'in tam yığınını (torch, transformers, mlflow, chromadb ile ~3GB) DEĞİL, sadece test edilen modülün ihtiyaç duyduğu minimal seti (`pandas`, `PuLP`, `pytest`, `ruff`) kuruyor — CI hızlı kalsın diye.
+- `tests/test_optimize_routes.py` — PuLP LP modelinin 4 kısıtını (toplam kapasite, havalimanı slotu, minimum hizmet, yoğunlaşma sınırı) küçük, sentetik bir rota tablosuyla doğruluyor. `optimize_routes()`'a bunun için opsiyonel `routes_df` parametresi eklendi (gerçek `data/routes.csv` Git'e girmediği için testler ona bağımlı olamaz).
+- **Bilinçli kapsam sınırı:** agent/RAG/forecast modülleri (Ollama, MLflow, Chroma gibi CI'da bulunmayan dış servislere bağımlı) henüz otomatik test kapsamında değil — sadece `optimize_routes.py` (dış bağımlılığı olmayan saf PuLP/pandas mantığı) test ediliyor.
+- İlk workfow çalıştırması push sonrası GitHub API ile izlendi, `success` ile tamamlandı.
+
 ## Kalan Yol Haritası
 
 ### Seviye 5 — Production Görünümü
-3. GitHub Actions ile CI (lint + pytest) kur.
 4. Render/Railway/Hugging Face Spaces gibi ücretsiz bir platformda canlıya al.
 5. README'yi ve proje açıklamasını portföy/CV seviyesine getir.
 
