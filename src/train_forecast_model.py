@@ -1,3 +1,12 @@
+import os
+
+# MLflow 3.x, dosya tabanlı (./mlruns) tracking backend'ini "bakım modu"na aldı ve
+# varsayılan olarak hata fırlatıyor (sqlite/postgres gibi bir veritabanına geçişi
+# öneriyor). Bu proje ücretsiz/sıfır-kurulum prensibiyle yerel dosya backend'inde
+# kalıyor (mlruns/ zaten .gitignore'da, tek kullanıcılık bir proje için yeterli) —
+# bu yüzden mlflow'u import etmeden önce opt-out bayrağını set ediyoruz.
+os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
+
 import numpy as np
 import pandas as pd
 import mlflow
@@ -44,6 +53,22 @@ def train_and_log(model, model_name, register=False):
         kwargs = {"registered_model_name": "aerocargo_forecast_model"} if register else {}
         mlflow.sklearn.log_model(pipeline, "model", **kwargs)
         print(f"{model_name} -> MAE: {mae:.1f}, R2: {r2:.3f}")
+        return mlflow.active_run().info.run_id, mae
 
-train_and_log(LinearRegression(), "LinearRegression_v2", register=True)
-train_and_log(RandomForestRegressor(n_estimators=200, max_depth=10, random_state=42), "RandomForest_v2", register=True)
+sonuclar = [
+    ("LinearRegression_v2", *train_and_log(LinearRegression(), "LinearRegression_v2", register=True)),
+    ("RandomForest_v2", *train_and_log(RandomForestRegressor(n_estimators=200, max_depth=10, random_state=42), "RandomForest_v2", register=True)),
+]
+
+# En düşük MAE'ye sahip modeli "champion" alias'ıyla işaretliyoruz. Stage'ler
+# (Staging/Production) MLflow 2.9'dan beri deprecated; yerine önerilen yöntem bu.
+# src/forecast_model.py serve ederken hep bu alias'ı yüklüyor, böylece "hangi versiyon
+# en iyisiydi" bilgisini elle takip etmeye ya da koda gömmeye gerek kalmıyor.
+client = mlflow.MlflowClient()
+en_iyi_isim, en_iyi_run_id, en_iyi_mae = min(sonuclar, key=lambda s: s[2])
+en_iyi_versiyon = next(
+    v.version for v in client.search_model_versions("name='aerocargo_forecast_model'")
+    if v.run_id == en_iyi_run_id
+)
+client.set_registered_model_alias("aerocargo_forecast_model", "champion", en_iyi_versiyon)
+print(f"\nChampion: {en_iyi_isim} (v{en_iyi_versiyon}, MAE: {en_iyi_mae:.1f})")
