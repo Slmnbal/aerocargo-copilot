@@ -63,6 +63,7 @@ jsonschema-specifications==2025.9.1
 kiwisolver==1.4.7
 kubernetes==35.0.0
 langchain-core==0.3.86
+langchain-ollama==0.3.10
 langgraph==0.6.11
 langgraph-checkpoint==2.1.2
 langgraph-prebuilt==0.6.5

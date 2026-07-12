@@ -11,8 +11,13 @@ def soru_cevapla(soru):
     sonuclar = collection.query(query_embeddings=soru_embedding, n_results=2)
     baglam = "\n\n".join(sonuclar["documents"][0])
 
+    # Not: "bilmiyorsan söyle" talimatı doğal dille verildiğinde model her seferinde farklı
+    # bir cümle kuruyor (agent.py tarafında bunu algılamayı güvenilmez hale getiriyordu).
+    # Bunun yerine tek, sabit bir işaret metni istiyoruz — böylece "bilgi yok" durumu
+    # downstream kodda serbest metin ayrıştırmadan, doğrudan karşılaştırmayla yakalanabiliyor.
     prompt = f"""Aşağıdaki doküman parçalarını kullanarak soruyu cevapla.
-Sadece verilen bilgiye dayan, bilmiyorsan "Bu bilgi dokümanlarda yok" de.
+Sadece verilen bilgiye dayan. Cevap dokümanlarda yoksa, başka hiçbir şey yazmadan
+SADECE şunu yaz: BILGI_YOK
 
 Dokümanlar:
 {baglam}
@@ -21,7 +26,13 @@ Soru: {soru}
 
 Cevap:"""
 
-    yanit = ollama.chat(model="llama3.2", messages=[{"role": "user", "content": prompt}])
+    # temperature=0: cevabın her seferinde dokümana sadık, tutarlı olması için
+    # (varsayılan sıcaklıkta model bazen bağlamı bırakıp kendi bilgisini uyduruyordu)
+    yanit = ollama.chat(
+        model="llama3.2",
+        messages=[{"role": "user", "content": prompt}],
+        options={"temperature": 0},
+    )
     return yanit["message"]["content"]
 
 if __name__ == "__main__":
