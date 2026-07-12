@@ -15,7 +15,7 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
 - Var olan kod stiline uy: değişken/fonksiyon isimleri karışık (bazı yerler İngilizce, kod içi açıklamalar ve print mesajları Türkçe) — bu tutarlılığı koru.
 - Her görev bitince Git'e anlamlı, Türkçe bir commit mesajıyla kaydet.
 
-## Mevcut Durum (Seviye 1-2 Tamamlandı, Seviye 3 Görev 1-2 Tamamlandı)
+## Mevcut Durum (Seviye 1-3 Tamamlandı)
 
 **Klasör yapısı:** `src/` (kod), `data/` (üretilen veri, `.gitignore`'da — Git'e girmez), `docs/` (RAG kaynak dokümanları, versiyonlanır), `notebooks/`, `tests/` (henüz boş).
 
@@ -29,18 +29,16 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
 - `src/build_vector_db.py` — `sentence-transformers` (`all-MiniLM-L6-v2`) ile embedding, Chroma'da saklama (`data/chroma_db/`, koleksiyon adı: `aerocargo_docs`).
 - `src/rag_query.py` — `soru_cevapla(soru)` fonksiyonu: Chroma'dan bağlam çeker, Ollama'daki `llama3.2` modeline (`temperature=0`) RAG prompt'uyla gönderir. Dokümanlarda cevap yoksa model sabit bir işaret metni (`BILGI_YOK`) döndürür — doğal dilde "bilmiyorum" cümlesi kurdurmak yerine bunu tercih ettik, çünkü serbest metin her seferinde farklı çıkıyordu ve downstream kodda güvenilir şekilde yakalanamıyordu.
 
-**Seviye 3 — LangGraph Agent + Arayüz (Görev 1-2 tamamlandı, Görev 3 kaldı):**
+**Seviye 3 — LangGraph Agent + Arayüz (tamamlandı):**
 - `src/optimize_routes.py` artık `optimize_routes(top_n=20)` fonksiyonu (print yerine dict return).
 - `src/agent_tools.py` — iki LangGraph tool: `bilgi_sorgula` (RAG) ve `kapasite_optimizasyonu_calistir` (optimizasyon).
 - `src/agent.py` — LangGraph StateGraph: agent düğümü tool seçip çağırıyor, tools düğümü çalıştırıyor, sonuç tekrar agent'a dönüp son cevabı üretiyor.
   - **Model: `llama3.1:8b`** (agent'ın tool-routing modeli) — `llama3.2` denendi ama Ollama üzerinden tool-calling'i (özellikle Türkçe karakterli argümanlarda) tutarsızdı: bazen JSON'u bozuk üretiyor, bazen aynı tool'u sonsuz çağırıyor, bazen hiç tool çağırmadan halüsinasyon yapıyordu. `llama3.1:8b` (Meta'nın fonksiyon çağırma için özel eğittiği model) bu sorunları çözdü. `rag_query.py`'nin kendi üretim adımı hâlâ `llama3.2` kullanıyor (o ayrı, tool-calling gerektirmiyor).
   - Güvenlik katmanları (küçük modellerle çalışırken gerekli oldu, büyük/bulut modele geçilse bile zararsız): ilk turda `tool_choice="any"` ile tool seçimi zorunlu kılınıyor; ikinci turda tool'lar hiç bağlanmıyor (yapısal olarak tekrar tool çağıramaz, sonsuz döngü engellenir); bozuk JSON tool çağrısı regex ile onarılıyor; `bilgi_sorgula` sonucu `BILGI_YOK` ise LLM'e hiç sorulmadan sabit bir cevap dönülüyor (halüsinasyon riski sıfırlanıyor).
   - Kalan bilinen sınırlama: agent'ın genel sentez cevapları (örn. optimizasyon sonucunu özetlerken) bazen sayısal detayları atlayıp genel geçer cümleler kuruyor — yanlış değil ama az detaylı. Seviye 4'te model değişimiyle (Groq/Gemini) yeniden değerlendirilebilir.
+- `src/app.py` — Streamlit sohbet arayüzü, `agent.py`'deki `soru_sor`'u çağırıyor. `streamlit run src/app.py` ile başlatılır (proje kökünden çalıştırılmalı — göreli veri yolları buna göre). `streamlit.testing.v1.AppTest` ile uçtan uca doğrulandı (gerçek tarayıcı yerine).
 
 ## Kalan Yol Haritası
-
-### Seviye 3 — LangGraph Agent + Arayüz
-3. Streamlit ile basit bir sohbet arayüzü kur, agent'ı (`src/agent.py`'deki `soru_sor`) buna bağla.
 
 ### Seviye 4 — MCP + Backend + LLMOps
 1. Optimizasyon ve RAG tool'larını bir MCP server olarak dışa aç (Claude Desktop'tan test edilebilir olsun).
