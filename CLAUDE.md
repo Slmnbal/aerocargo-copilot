@@ -15,7 +15,7 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
 - Var olan kod stiline uy: değişken/fonksiyon isimleri karışık (bazı yerler İngilizce, kod içi açıklamalar ve print mesajları Türkçe) — bu tutarlılığı koru.
 - Her görev bitince Git'e anlamlı, Türkçe bir commit mesajıyla kaydet.
 
-## Mevcut Durum (Seviye 1-3 Tamamlandı, Seviye 4 Görev 1-4 Tamamlandı)
+## Mevcut Durum (Seviye 1-3 Tamamlandı, Seviye 4 Görev 1-5 Tamamlandı)
 
 **Klasör yapısı:** `src/` (kod), `data/` (üretilen veri, `.gitignore`'da — Git'e girmez), `docs/` (RAG kaynak dokümanları, versiyonlanır), `notebooks/`, `tests/` (henüz boş).
 
@@ -54,11 +54,14 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
   - `agent.py` ve `rag_query.py` artık bu ortak config'ten model alıyor; `rag_query.py` bu vesileyle ham `ollama` paketinden langchain arayüzüne geçti (iki modülün de aynı config'e bağlanabilmesi için).
   - Sadece Ollama ile test edildi (kullanıcının henüz Groq API key'i yok) — eval seti aynı sonucu verdi (11/12, %92), regresyon yok. Groq tarafı `console.groq.com`'dan ücretsiz key alınıp `.env`'e `GROQ_API_KEY` ve `LLM_SAGLAYICI=groq` eklenince test edilmeyi bekliyor.
   - Gemini bilinçli olarak eklenmedi (kullanıcı Ollama+Groq'u seçti); ileride istenirse aynı `llm_config.py` deseniyle eklenebilir.
+- `src/forecast_model.py` — `talep_tahmin_et(origin, destination, days_per_week=None)`: MLflow'daki `aerocargo_forecast_model`'in **"champion" alias'lı** versiyonunu yükleyip talep (flight_count) tahmini üretiyor. `api.py`'de `POST /forecast` olarak dışa açık.
+  - `train_forecast_model.py` artık her çalıştırıldığında iki modeli de eğitip en düşük MAE'ye sahip olanı otomatik `champion` alias'ına atıyor (MLflow'da deprecated olan Staging/Production stage'leri yerine önerilen yöntem) — `/forecast` hep bu alias'ı okuyor, "hangi versiyon en iyisiydi" elle takip edilmiyor.
+  - Rota veri setinde (`route_features.csv`) zaten varsa gerçek `days_per_week`/popülerlik özellikleri kullanılıyor; yoksa `days_per_week` zorunlu (400 hatası döner) ve popülerlik, o havalimanının veri setindeki toplam uçuş sayısından (leave-one-out çıkarma yapılmadan, çünkü yeni rotanın kendi payı zaten sıfır) türetiliyor. Model `log1p(flight_count)` hedefiyle eğitildiği için tahmin `expm1` ile geri çevriliyor — bu adım atlanırsa tahminler log-ölçekte (çok küçük) çıkar.
+  - **Bulunan/düzeltilen iki yan sorun:** (1) MLflow 3.x dosya tabanlı (`mlruns/`) tracking backend'i artık varsayılan olarak hataya çeviriyor (sqlite'a geçişi öneriyor) — proje sıfır-kurulum prensibini korumak için `MLFLOW_ALLOW_FILE_STORE=true` ile susturuldu (`train_forecast_model.py` ve `forecast_model.py`'nin en üstünde). (2) `api.py`'de `forecast_model` mutlaka `agent`'tan **önce** import edilmeli — `mlflow.pyfunc`'ın kullandığı `skops`, `transformers` paketi zaten yüklüyken (agent → rag_query → sentence_transformers zincirinde olduğu gibi) import edilirse `transformers`'ın lazy-loading mekanizmasına takılıp eksik `torchvision`'dan çöküyor; import sırasını tersine çevirmek yeni bağımlılık eklemeden bunu bypass ediyor.
 
 ## Kalan Yol Haritası
 
 ### Seviye 4 — MCP + Backend + LLMOps
-5. `aerocargo_forecast_model`'i ayrı bir `/forecast` endpoint'i olarak serve et.
 6. Model monitoring: tahmin hatası ve veri drift takibi + basit yeniden eğitim tetikleyici.
 
 ### Seviye 5 — Production Görünümü
