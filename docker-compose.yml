@@ -1,0 +1,53 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      # data/ (chroma_db, route_features.csv, logs), önceden data_prep.py/build_vector_db.py
+      # ile host'ta üretilen dosyalar — imaja gömmek yerine host'tan mount ediyoruz.
+      - ./data:/app/data
+      # mlruns için host'un ./mlruns'unu DEĞİL, container'a özel bir named volume
+      # kullanıyoruz: MLflow'un dosya tabanlı backend'i artifact yollarını mutlak yol
+      # olarak kaydediyor (bkz. mlruns/<exp>/meta.yaml içindeki artifact_location).
+      # Host'taki mlruns'u buraya mount etseydik, host'un mutlak yollarıyla (/Users/...)
+      # kaydedilmiş modeller container içinde (/app/...) bulunamazdı. Bu yüzden ilk
+      # kurulumda modeli container İÇİNDE eğitmek gerekiyor (bkz. README) — bu named
+      # volume kendi tutarlı /app/mlruns yollarını üretir, host'unkiyle hiç karışmaz.
+      - mlruns_data:/app/mlruns
+      # sentence-transformers'ın indirdiği embedding modelini host'un HF cache'inden
+      # paylaşarak her container başlatmada yeniden indirmeyi önlüyor.
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    environment:
+      # LLM_SAGLAYICI/GROQ_API_KEY, docker compose'un proje kökündeki .env dosyasından
+      # otomatik okuduğu değişkenler (python-dotenv değil, compose'un kendi mekanizması) —
+      # .env yoksa boş/varsayılan değerler kullanılır (bkz. .env.example).
+      - LLM_SAGLAYICI=${LLM_SAGLAYICI:-ollama}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      # MLflow'un dosya tabanlı model registry'si, boş bir mlruns/ üzerinde tutarsız
+      # davranıyor (registry için cwd'ye bağımlı, volume dışında kalan geçici bir
+      # mlflow.db oluşturuyor — bkz. bu dosyanın git geçmişindeki not). Tracking URI'yi
+      # named volume İÇİNDEKİ bir sqlite dosyasına sabitleyerek hem "run --rm" (eğitim)
+      # hem sürekli çalışan servis aynı, kalıcı registry'yi görüyor.
+      - MLFLOW_TRACKING_URI=sqlite:////app/mlruns/mlflow.db
+      # macOS/Windows Docker Desktop'ta host.docker.internal hazır geliyor; Linux'ta
+      # aşağıdaki extra_hosts girdisi bunu host-gateway'e çözüyor. Ollama host makinede
+      # (container dışında) çalışmaya devam ediyor — modeli container'a taşımıyoruz.
+      - OLLAMA_HOST=http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Tarayıcı backend'e host üzerinden (container ağı değil) yayınlanmış 8000
+        # portundan erişiyor — bu yüzden localhost:8000 doğru, backend:8000 değil.
+        VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  mlruns_data:

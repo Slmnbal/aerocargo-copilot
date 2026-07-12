@@ -18,13 +18,16 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# React arayüzü (frontend/, Vite dev server) tarayıcıdan doğrudan bu API'ye istek atıyor
-# (farklı origin/port) — CORS izni olmadan tarayıcı bu istekleri engeller. Sadece yerel
-# geliştirme portlarına izin veriyoruz; canlıya alınca (Seviye 5) gerçek frontend
-# domain'i buraya eklenmeli.
+# React arayüzü tarayıcıdan doğrudan bu API'ye istek atıyor (farklı origin/port) —
+# CORS izni olmadan tarayıcı bu istekleri engeller. 5173: Vite dev sunucusu,
+# 3000: docker-compose'daki frontend container'ının host'a yayınlanmış portu.
+# Canlıya alınca (Seviye 5 deploy görevi) gerçek frontend domain'i buraya eklenmeli.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173", "http://127.0.0.1:5173",
+        "http://localhost:3000", "http://127.0.0.1:3000",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
