@@ -15,7 +15,7 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
 - Var olan kod stiline uy: değişken/fonksiyon isimleri karışık (bazı yerler İngilizce, kod içi açıklamalar ve print mesajları Türkçe) — bu tutarlılığı koru.
 - Her görev bitince Git'e anlamlı, Türkçe bir commit mesajıyla kaydet.
 
-## Mevcut Durum (Seviye 1-3 Tamamlandı, Seviye 4 Görev 1-2 Tamamlandı)
+## Mevcut Durum (Seviye 1-3 Tamamlandı, Seviye 4 Görev 1-3 Tamamlandı)
 
 **Klasör yapısı:** `src/` (kod), `data/` (üretilen veri, `.gitignore`'da — Git'e girmez), `docs/` (RAG kaynak dokümanları, versiyonlanır), `notebooks/`, `tests/` (henüz boş).
 
@@ -44,6 +44,12 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
 - `optimize_routes.py`: `prob.solve()` → `prob.solve(PULP_CBC_CMD(msg=False))` — CBC solver'ın stdout'a yazdığı log satırları MCP'nin JSON-RPC stdio akışını bozuyordu, `msg=False` ile susturuldu.
 - Claude Desktop config'e (`~/Library/Application Support/Claude/claude_desktop_config.json`) `mcpServers.aerocargo-copilot` eklendi (`.venv/bin/python` + `mcp_server.py` mutlak yollarla). Claude Desktop yeniden başlatılınca aktif olur.
 - `src/api.py` — FastAPI backend: `GET /saglik` (health check), `POST /soru` (`{"soru": "..."}` → `{"cevap": "..."}`, `agent.py`'deki `soru_sor`'u çağırıyor). Otomatik OpenAPI docs `/docs`'ta. `uvicorn api:app --app-dir src` ile başlatılır (cwd proje kökünde kalır, `--app-dir` sadece import path'i ekliyor). curl ile uçtan uca doğrulandı (health, RAG sorusu, optimizasyon sorusu, `/docs`).
+- **Loglama:** `agent.py`'deki `soru_sor_detayli(soru)` (gecikme, token, hangi tool çağrıldığı bilgisini de döndürüyor) her çağrıda `data/logs/agent_log.jsonl`'a JSON satırı olarak yazıyor (`.gitignore`'da). `soru_sor(soru)` bunun sade (sadece cevap döndüren) sarmalayıcısı.
+- **Eval seti:** `tests/eval_seti.jsonl` (12 soru: RAG bilinen/bilinmeyen + optimizasyon karışımı, her biri için `beklenen_tool` ve `beklenen_anahtar_kelimeler`), `src/run_eval.py` ile çalıştırılıyor.
+  - İlk çalıştırma %58 (7/12) çıktı — sebep: `bilgi_sorgula` tool'u doğru rakamı (`%50`, `%60` vb.) döndürüyordu ama agent'ın ikinci turdaki LLM sentezi bunu paraphrase ederken rakamları düşürüyordu (tool routing'in kendisi 12/12 doğruydu).
+  - Düzeltme: `agent_node`'da, çağrılan tool `bilgi_sorgula` ise (BILGI_YOK durumundaki gibi) LLM'e tekrar sormadan tool sonucu doğrudan döndürülüyor artık — RAG'ın kendi cevabı zaten tam ve doğru, tekrar sentezlemenin katma değeri yok, sadece detay kaybı ve gecikme/token maliyeti getiriyordu.
+  - Düzeltme sonrası: **%92 (11/12)**, ortalama gecikme 15.4sn → 12.85sn, toplam token 8012 → 6692.
+  - Kalan tek başarısızlık (yoğunlaşma sınırı %25 sorusu) bir retrieval sorunu: Chroma bu soru için %25'in geçtiği doküman parçası yerine başka bir parçayı getiriyor — sentez veya halüsinasyon sorunu değil, düşük öncelikli bilinen bir sınırlama.
 
 ## Kalan Yol Haritası
 

@@ -1,0 +1,12 @@
+{"soru": "Toplam filo kapasitesi nasıl belirleniyor?", "beklenen_tool": "bilgi_sorgula", "beklenen_anahtar_kelimeler": ["%60"]}
+{"soru": "Havalimanı slot kısıtı nasıl hesaplanıyor?", "beklenen_tool": "bilgi_sorgula", "beklenen_anahtar_kelimeler": ["%50"]}
+{"soru": "Minimum hizmet seviyesi kuralı nedir?", "beklenen_tool": "bilgi_sorgula", "beklenen_anahtar_kelimeler": ["%10"]}
+{"soru": "Yoğunlaşma sınırı yüzde kaçtır?", "beklenen_tool": "bilgi_sorgula", "beklenen_anahtar_kelimeler": ["%25"]}
+{"soru": "Düşük talepli bir rotayı neden tamamen kapatmıyoruz?", "beklenen_tool": "bilgi_sorgula", "beklenen_anahtar_kelimeler": ["minimum hizmet"]}
+{"soru": "Rota önceliklendirmesi hangi mantığa göre yapılıyor?", "beklenen_tool": "bilgi_sorgula", "beklenen_anahtar_kelimeler": ["talep"]}
+{"soru": "Aksama durumunda hangi rotalar öncelikli korunur?", "beklenen_tool": "bilgi_sorgula", "beklenen_anahtar_kelimeler": ["yoğun", "talep"]}
+{"soru": "Yakıt fiyatlarındaki artış rota kararlarını nasıl etkiliyor?", "beklenen_tool": "bilgi_sorgula", "beklenen_anahtar_kelimeler": ["dokümanlarımızda bilgi bulunmuyor"]}
+{"soru": "Uçak bakım programı nasıl planlanır?", "beklenen_tool": "bilgi_sorgula", "beklenen_anahtar_kelimeler": ["dokümanlarımızda bilgi bulunmuyor"]}
+{"soru": "En yoğun 5 rota için kapasiteyi optimize eder misin?", "beklenen_tool": "kapasite_optimizasyonu_calistir", "beklenen_anahtar_kelimeler": []}
+{"soru": "En yoğun 10 rotanın kapasite dağılımını hesapla.", "beklenen_tool": "kapasite_optimizasyonu_calistir", "beklenen_anahtar_kelimeler": []}
+{"soru": "Rotalara göre kapasite atamasını optimize et.", "beklenen_tool": "kapasite_optimizasyonu_calistir", "beklenen_anahtar_kelimeler": []}

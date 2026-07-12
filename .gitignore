@@ -6,3 +6,4 @@ data/*.csv
 .DS_Store
 mlruns/
 data/chroma_db/
+data/logs/

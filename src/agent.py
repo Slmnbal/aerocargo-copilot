@@ -1,4 +1,8 @@
+import json
 import re
+import time
+from datetime import datetime, timezone
+from pathlib import Path
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_ollama import ChatOllama
@@ -67,6 +71,12 @@ def agent_node(state: MessagesState):
             # durumda bile bazen kendi bilgisinden bir cevap uyduruyordu (halüsinasyon).
             # Doğal dil talimatına güvenmek yerine bunu kodda garanti altına alıyoruz.
             return {"messages": [AIMessage(content=BILGI_YOK_CEVABI)]}
+        if son_tool_mesaji.name == "bilgi_sorgula":
+            # bilgi_sorgula zaten dokümana dayalı, tam ve doğru bir cevap döndürüyor.
+            # Bunu LLM'e tekrar "sentezletmek" (eval_seti.jsonl ile ölçtük) rakamları
+            # (%50, %60 gibi) paraphrase sırasında düşürüyordu — hem yanlış bilgi riski
+            # hem gereksiz gecikme/token. Bu yüzden tool sonucunu doğrudan iletiyoruz.
+            return {"messages": [AIMessage(content=son_tool_mesaji.content)]}
 
     secilen_llm = llm_zorunlu_tool if henuz_tool_calismadi else llm_ham
     yanit = secilen_llm.invoke(mesajlar)
@@ -100,13 +110,57 @@ SISTEM_MESAJI = (
 )
 
 
-def soru_sor(soru):
+LOG_DOSYASI = Path(__file__).resolve().parent.parent / "data" / "logs" / "agent_log.jsonl"
+
+
+def _log_kaydet(soru, cevap, gecikme_saniye, tool_kullanildi, toplam_token):
+    LOG_DOSYASI.parent.mkdir(parents=True, exist_ok=True)
+    kayit = {
+        "zaman": datetime.now(timezone.utc).isoformat(),
+        "soru": soru,
+        "cevap": cevap,
+        "gecikme_saniye": round(gecikme_saniye, 2),
+        "tool_kullanildi": tool_kullanildi,
+        "toplam_token": toplam_token,
+    }
+    with open(LOG_DOSYASI, "a", encoding="utf-8") as f:
+        f.write(json.dumps(kayit, ensure_ascii=False) + "\n")
+
+
+def soru_sor_detayli(soru):
+    """soru_sor'un, LLMOps için gecikme/token/tool bilgisini de döndüren hali.
+    Hem loglama hem eval script'i (run_eval.py) bunu kullanıyor."""
     mesajlar = [
         {"role": "system", "content": SISTEM_MESAJI},
         {"role": "user", "content": soru},
     ]
+    baslangic = time.monotonic()
     sonuc = app.invoke({"messages": mesajlar}, config={"recursion_limit": 8})
-    return sonuc["messages"][-1].content
+    gecikme_saniye = time.monotonic() - baslangic
+
+    tum_mesajlar = sonuc["messages"]
+    cevap = tum_mesajlar[-1].content
+    tool_kullanildi = next(
+        (m.name for m in tum_mesajlar if isinstance(m, ToolMessage)), None
+    )
+    toplam_token = sum(
+        m.usage_metadata["total_tokens"]
+        for m in tum_mesajlar
+        if isinstance(m, AIMessage) and getattr(m, "usage_metadata", None)
+    )
+
+    _log_kaydet(soru, cevap, gecikme_saniye, tool_kullanildi, toplam_token)
+
+    return {
+        "cevap": cevap,
+        "tool_kullanildi": tool_kullanildi,
+        "gecikme_saniye": gecikme_saniye,
+        "toplam_token": toplam_token,
+    }
+
+
+def soru_sor(soru):
+    return soru_sor_detayli(soru)["cevap"]
 
 
 if __name__ == "__main__":
