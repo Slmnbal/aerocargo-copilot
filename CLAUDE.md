@@ -60,3 +60,4 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
 - Tüm araçlar ücretsiz/açık kaynak sürümleriyle kullanılıyor — yeni bir araç eklerken de bu prensibi koru.
 - `data/*.csv` ve `data/chroma_db/` `.gitignore`'da, hiçbir zaman commit'leme.
 - Varsayımlar (kapasite oranları, gün sayımı mantığı gibi) kod içinde yorum olarak belirtiliyor — yeni varsayım eklersen aynı şekilde belgelemeyi unutma.
+- **Python sürümü: 3.12** (`.venv`). Seviye 4 Görev 1'de `mcp` paketi Python ≥3.10 istediği için 3.9'dan yükseltildi; `.venv` silinip 3.12 ile yeniden kuruldu, tüm paketler sabit sürüm yerine üst düzey isimleriyle (pandas, pulp, mlflow, chromadb, vb.) taze kuruldu ki pip kendi uyumlu sürümlerini çözebilsin (eski dondurulmuş `requirements.txt`'teki `pyarrow==20.0.0` gibi sabit sürümler yeni paketlerle çakışıyordu).
