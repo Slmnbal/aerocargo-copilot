@@ -9,8 +9,12 @@ from pulp import LpProblem, LpMaximize, LpVariable, lpSum, value, PULP_CBC_CMD
 PROJE_KOKU = Path(__file__).resolve().parent.parent
 
 
-def optimize_routes(top_n=20):
-    routes = pd.read_csv(PROJE_KOKU / "data" / "routes.csv")
+def optimize_routes(top_n=20, routes_df=None):
+    # routes_df: testlerde (tests/test_optimize_routes.py) gerçek data/routes.csv
+    # (Git'e girmiyor, data_prep.py ile üretiliyor) yerine küçük, sentetik bir tabloyla
+    # LP modelini doğrulayabilmek için enjekte edilebiliyor. Normal kullanımda None
+    # kalır ve her zamanki gibi CSV'den okunur.
+    routes = routes_df if routes_df is not None else pd.read_csv(PROJE_KOKU / "data" / "routes.csv")
     routes = routes.sort_values("flight_count", ascending=False).head(top_n).reset_index(drop=True)
 
     TOTAL_CAPACITY = int(routes["flight_count"].sum() * 0.6)

@@ -1,0 +1,10 @@
+# CI'da lint+test için kullanılan minimal bağımlılık seti. requirements.txt (torch,
+# transformers, mlflow, chromadb, langgraph vb. ile ~3GB) yerine bunu kullanıyoruz —
+# şu an CI'da test edilen tek modül (optimize_routes.py, bkz. tests/) sadece pandas
+# ve PuLP'a ihtiyaç duyuyor; agent/RAG/forecast modülleri Ollama/MLflow/Chroma gibi
+# CI'da bulunmayan dış servislere bağımlı olduğu için henüz otomatik test kapsamında
+# değil (bkz. CLAUDE.md).
+pandas==2.3.3
+PuLP==3.3.2
+pytest==9.1.1
+ruff==0.15.21
