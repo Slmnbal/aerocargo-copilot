@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # forecast_model, agent'tan ÖNCE import edilmeli: forecast_model mlflow.pyfunc üzerinden
@@ -15,6 +16,17 @@ app = FastAPI(
     title="AeroCargo Copilot API",
     description="Kapasite optimizasyonu ve operasyonel politikalar (RAG) hakkında soru-cevap agent'ı.",
     version="1.0.0",
+)
+
+# React arayüzü (frontend/, Vite dev server) tarayıcıdan doğrudan bu API'ye istek atıyor
+# (farklı origin/port) — CORS izni olmadan tarayıcı bu istekleri engeller. Sadece yerel
+# geliştirme portlarına izin veriyoruz; canlıya alınca (Seviye 5) gerçek frontend
+# domain'i buraya eklenmeli.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
