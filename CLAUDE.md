@@ -15,7 +15,7 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
 - Var olan kod stiline uy: değişken/fonksiyon isimleri karışık (bazı yerler İngilizce, kod içi açıklamalar ve print mesajları Türkçe) — bu tutarlılığı koru.
 - Her görev bitince Git'e anlamlı, Türkçe bir commit mesajıyla kaydet.
 
-## Mevcut Durum (Seviye 1-3 Tamamlandı, Seviye 4 Görev 1-3 Tamamlandı)
+## Mevcut Durum (Seviye 1-3 Tamamlandı, Seviye 4 Görev 1-4 Tamamlandı)
 
 **Klasör yapısı:** `src/` (kod), `data/` (üretilen veri, `.gitignore`'da — Git'e girmez), `docs/` (RAG kaynak dokümanları, versiyonlanır), `notebooks/`, `tests/` (henüz boş).
 
@@ -50,12 +50,14 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
   - Düzeltme: `agent_node`'da, çağrılan tool `bilgi_sorgula` ise (BILGI_YOK durumundaki gibi) LLM'e tekrar sormadan tool sonucu doğrudan döndürülüyor artık — RAG'ın kendi cevabı zaten tam ve doğru, tekrar sentezlemenin katma değeri yok, sadece detay kaybı ve gecikme/token maliyeti getiriyordu.
   - Düzeltme sonrası: **%92 (11/12)**, ortalama gecikme 15.4sn → 12.85sn, toplam token 8012 → 6692.
   - Kalan tek başarısızlık (yoğunlaşma sınırı %25 sorusu) bir retrieval sorunu: Chroma bu soru için %25'in geçtiği doküman parçası yerine başka bir parçayı getiriyor — sentez veya halüsinasyon sorunu değil, düşük öncelikli bilinen bir sınırlama.
+- `src/llm_config.py` — `LLM_SAGLAYICI` ortam değişkenine (`.env`, `.gitignore`'da; şablonu `.env.example`) göre `get_agent_llm()` (agent'ın tool-routing modeli) ve `get_rag_llm()` (RAG sentez modeli) fonksiyonları Ollama (varsayılan, key gerektirmez) veya Groq (`GROQ_API_KEY`, ücretsiz katman: `llama-3.3-70b-versatile` tool-routing için, `llama-3.1-8b-instant` RAG sentez için) döndürüyor.
+  - `agent.py` ve `rag_query.py` artık bu ortak config'ten model alıyor; `rag_query.py` bu vesileyle ham `ollama` paketinden langchain arayüzüne geçti (iki modülün de aynı config'e bağlanabilmesi için).
+  - Sadece Ollama ile test edildi (kullanıcının henüz Groq API key'i yok) — eval seti aynı sonucu verdi (11/12, %92), regresyon yok. Groq tarafı `console.groq.com`'dan ücretsiz key alınıp `.env`'e `GROQ_API_KEY` ve `LLM_SAGLAYICI=groq` eklenince test edilmeyi bekliyor.
+  - Gemini bilinçli olarak eklenmedi (kullanıcı Ollama+Groq'u seçti); ileride istenirse aynı `llm_config.py` deseniyle eklenebilir.
 
 ## Kalan Yol Haritası
 
 ### Seviye 4 — MCP + Backend + LLMOps
-3. Loglama (gecikme, token kullanımı) ve küçük bir eval seti (10-15 test sorusu) ekle.
-4. Ollama ile Groq/Gemini (ücretsiz katman) arasında config ile model değiştirilebilir hale getir.
 5. `aerocargo_forecast_model`'i ayrı bir `/forecast` endpoint'i olarak serve et.
 6. Model monitoring: tahmin hatası ve veri drift takibi + basit yeniden eğitim tetikleyici.
 
