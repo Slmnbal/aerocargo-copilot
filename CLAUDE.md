@@ -69,10 +69,19 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
 - `src/app.py` (Streamlit) kaldırıldı, `streamlit` bağımlılığı `requirements.txt`'ten temizlendi — React artık tek arayüz. Streamlit'e dönmek istenirse git geçmişinden geri alınabilir.
 - Geliştirme: `uvicorn api:app --app-dir src --port 8000` (backend) + `cd frontend && npm run dev` (frontend, ayrı terminal).
 
+**Seviye 5 Görev 2 — Docker + Docker Compose (tamamlandı):**
+- `Dockerfile` (backend, `python:3.12-slim`) + `frontend/Dockerfile` (multi-stage: `node` ile build, `nginx` ile statik servis) + `docker-compose.yml` — `docker compose up -d --build` ile backend (8000) + frontend (3000) ayağa kalkıyor. Kullanım: kök `README.md`'deki "Docker ile Çalıştırma" bölümü.
+- Ollama container'a taşınmadı (model indirmelerini compose'a dahil etmemek için bilinçli tercih) — host'ta çalışmaya devam ediyor, backend'e `OLLAMA_HOST=http://host.docker.internal:11434` ile erişiyor (Linux için `extra_hosts: host-gateway`).
+- `api.py`'nin CORS listesine `localhost:3000` (docker-compose'daki frontend portu) eklendi.
+- **Bulunan/düzeltilen iki gerçek sorun:**
+  1. `requirements.txt` (macOS'ta `pip freeze`) torch'u sabitliyor; Linux container'da bu pin varsayılan PyPI'den ~2GB gereksiz CUDA paketi (nvidia-*) çekiyordu. `Dockerfile` artık CPU-only torch'u `https://download.pytorch.org/whl/cpu`'dan ayrı kurup, `requirements.txt`'in geri kalanını torch pini olmadan (`grep -v '^torch=='`) kuruyor — image ~3GB (öncesinde ~6GB+ olurdu).
+  2. MLflow'un dosya tabanlı model registry'si **boş** bir `mlruns/` üzerinde tutarsız davranıp container'ın kalıcı olmayan katmanına (`/app/mlflow.db`, volume dışında) geçici bir sqlite dosyası yazıyordu — her `docker compose run --rm` sonrası kayboluyordu, uzun süren servis konteyneri bu kaydı hiç göremiyordu. Çözüm: `mlruns/` için host ile paylaşılan bind mount **değil**, container'a özel bir **named volume** (`mlruns_data`) + `MLFLOW_TRACKING_URI=sqlite:////app/mlruns/mlflow.db` (o volume'ün içinde) açıkça sabitlendi. Host'un kendi `mlruns/`'u (mutlak host yolları içerdiği için zaten container'a taşınamazdı, ayrı bir keşif) hiç karışmıyor artık.
+  - **Sonuç:** ilk kurulumda modeli container İÇİNDE eğitmek gerekiyor (`docker compose run --rm backend python src/train_forecast_model.py`, sonra `docker compose restart backend`) — named volume boş başlıyor, host'un `mlruns/`'undan miras almıyor. Bu adım README'de belgelendi.
+- Tüm akış (build, container-içi eğitim, `/saglik`+`/soru`+`/forecast`, frontend statik servis, CORS, host Ollama'ya erişim) uçtan uca test edildi.
+
 ## Kalan Yol Haritası
 
 ### Seviye 5 — Production Görünümü
-2. Docker + Docker Compose ile containerize et.
 3. GitHub Actions ile CI (lint + pytest) kur.
 4. Render/Railway/Hugging Face Spaces gibi ücretsiz bir platformda canlıya al.
 5. README'yi ve proje açıklamasını portföy/CV seviyesine getir.
