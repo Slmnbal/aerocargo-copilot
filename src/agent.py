@@ -5,20 +5,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from langchain_ollama import ChatOllama
 from langgraph.graph import StateGraph, MessagesState, START, END
 from langgraph.prebuilt import ToolNode
 
 from agent_tools import bilgi_sorgula, kapasite_optimizasyonu_calistir
+from llm_config import get_agent_llm
 
 TOOLS = [bilgi_sorgula, kapasite_optimizasyonu_calistir]
 TOOL_ADLARI = {t.name for t in TOOLS}
 
 # temperature=0: agent'ın tool seçimi ve cevapları tutarlı (deterministik) olsun diye
-# Model: llama3.2 yerine llama3.1:8b — llama3.2'nin tool-calling'i (özellikle Türkçe
-# argümanlarda) tutarsız çıktı (bkz. Seviye 3 Görev 2 notları), llama3.1:8b Meta
-# tarafından fonksiyon çağırma için özel eğitilmiş ve Ollama'da bu konuda daha güvenilir.
-llm = ChatOllama(model="llama3.1:8b", temperature=0)
+# Model seçimi artık llm_config.py'de: LLM_SAGLAYICI ortam değişkeniyle Ollama
+# (varsayılan, llama3.1:8b — llama3.2'nin tool-calling'i özellikle Türkçe argümanlarda
+# tutarsızdı, bkz. Seviye 3 Görev 2 notları) ile Groq arasında geçiş yapılabiliyor.
+llm = get_agent_llm()
 
 # Küçük yerel modeller "gerekirse tool çağır" talimatını kendi haline bırakılınca
 # tutarsız davranabiliyor: bazen hiç tool çağırmadan kendi (yanlış) bilgisinden cevap

@@ -2,7 +2,8 @@ from pathlib import Path
 
 import chromadb
 from sentence_transformers import SentenceTransformer
-import ollama
+
+from llm_config import get_rag_llm
 
 # Proje köküne göre mutlak yol: MCP gibi bu script'i hangi dizinden çalıştıracağı belli
 # olmayan istemcilerden çağrıldığında da (cwd her zaman proje kökü olmayabilir) doğru
@@ -12,6 +13,9 @@ PROJE_KOKU = Path(__file__).resolve().parent.parent
 model = SentenceTransformer("all-MiniLM-L6-v2")
 client = chromadb.PersistentClient(path=str(PROJE_KOKU / "data" / "chroma_db"))
 collection = client.get_or_create_collection("aerocargo_docs")
+# Model seçimi llm_config.py'de: LLM_SAGLAYICI ortam değişkeniyle Ollama (varsayılan,
+# llama3.2) ile Groq arasında geçiş yapılabiliyor. temperature=0 orada ayarlanıyor.
+llm = get_rag_llm()
 
 def soru_cevapla(soru):
     soru_embedding = model.encode([soru]).tolist()
@@ -33,14 +37,8 @@ Soru: {soru}
 
 Cevap:"""
 
-    # temperature=0: cevabın her seferinde dokümana sadık, tutarlı olması için
-    # (varsayılan sıcaklıkta model bazen bağlamı bırakıp kendi bilgisini uyduruyordu)
-    yanit = ollama.chat(
-        model="llama3.2",
-        messages=[{"role": "user", "content": prompt}],
-        options={"temperature": 0},
-    )
-    return yanit["message"]["content"]
+    yanit = llm.invoke(prompt)
+    return yanit.content
 
 if __name__ == "__main__":
     soru = "Havalimanı slot kısıtı nasıl belirleniyor?"
