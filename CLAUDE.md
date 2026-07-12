@@ -63,9 +63,19 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
   - **Veri drift:** `forecast_model.py` artık her `/forecast` çağrısını `data/logs/forecast_log.jsonl`'a logluyor (agent_log.jsonl ile aynı JSONL deseni); bu isteklerin özellik dağılımı (days_per_week, origin/destination_popularity) eğitim verisiyle Kolmogorov-Smirnov testiyle (`scipy.stats.ks_2samp`) karşılaştırılıyor (en az 20 örnek gerekiyor, p<0.05 ise drift).
   - Bilinçli tasarım kararı: script sadece rapor basıp "yeniden eğitim öneriliyor" diyor, **otomatik yeniden eğitmiyor** — eğitim/MLflow kaydı gibi bir yan etkiyi otomatikleştirmek riskli bulundu, karar kullanıcıda kalıyor. İki senaryo da (sağlıklı model / drift tespiti) manuel simülasyonla doğrulandı.
 
+**Seviye 5 — Production Görünümü (Görev 1 tamamlandı):**
+- `frontend/` — React (Vite + TypeScript) + Tailwind CSS v4 (`@tailwindcss/vite` plugin, ayrı postcss config gerektirmiyor). Sohbet (`/soru`) ve Talep Tahmini (`/forecast`) için iki sekmeli basit bir arayüz; `src/api.ts` backend'e `fetch` ile bağlanıyor (`VITE_API_BASE_URL`, varsayılan `http://localhost:8000`).
+- `src/api.py`'ye `CORSMiddleware` eklendi (`http://localhost:5173` — Vite dev portu); canlıya alınca gerçek frontend domain'i eklenmeli.
+- `src/app.py` (Streamlit) kaldırıldı, `streamlit` bağımlılığı `requirements.txt`'ten temizlendi — React artık tek arayüz. Streamlit'e dönmek istenirse git geçmişinden geri alınabilir.
+- Geliştirme: `uvicorn api:app --app-dir src --port 8000` (backend) + `cd frontend && npm run dev` (frontend, ayrı terminal).
+
 ## Kalan Yol Haritası
 
-Seviye 4 tamamlandı. Sırada Seviye 5 var (aşağıda).
+### Seviye 5 — Production Görünümü
+2. Docker + Docker Compose ile containerize et.
+3. GitHub Actions ile CI (lint + pytest) kur.
+4. Render/Railway/Hugging Face Spaces gibi ücretsiz bir platformda canlıya al.
+5. README'yi ve proje açıklamasını portföy/CV seviyesine getir.
 
 ### Seviye 5 — Production Görünümü
 1. Streamlit arayüzünü React (Vite + Tailwind) ile değiştir.
