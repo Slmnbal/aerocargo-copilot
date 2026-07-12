@@ -1,9 +1,16 @@
+from pathlib import Path
+
 import pandas as pd
-from pulp import LpProblem, LpMaximize, LpVariable, lpSum, value
+from pulp import LpProblem, LpMaximize, LpVariable, lpSum, value, PULP_CBC_CMD
+
+# Proje köküne göre mutlak yol: MCP gibi bu script'i hangi dizinden çalıştıracağı belli
+# olmayan istemcilerden çağrıldığında da (cwd her zaman proje kökü olmayabilir) doğru
+# data/routes.csv dosyasını bulabilsin diye.
+PROJE_KOKU = Path(__file__).resolve().parent.parent
 
 
 def optimize_routes(top_n=20):
-    routes = pd.read_csv("data/routes.csv")
+    routes = pd.read_csv(PROJE_KOKU / "data" / "routes.csv")
     routes = routes.sort_values("flight_count", ascending=False).head(top_n).reset_index(drop=True)
 
     TOTAL_CAPACITY = int(routes["flight_count"].sum() * 0.6)
@@ -38,7 +45,11 @@ def optimize_routes(top_n=20):
     for _, row in routes.iterrows():
         prob += route_vars[row["route"]] <= 0.25 * TOTAL_CAPACITY, f"Max_Yogunlasma_{row['route']}"
 
-    prob.solve()
+    # msg=False: CBC çözücüsü kendi log çıktısını harici bir process olarak doğrudan
+    # stdout'a yazıyor (Python print değil) — bu, MCP gibi stdout'u JSON-RPC mesajlaşması
+    # için kullanan bir protokolü bozuyordu. Log'u kapatmak hem MCP'yi düzeltiyor hem de
+    # zaten çıktımızda kullanmadığımız gürültüyü temizliyor.
+    prob.solve(PULP_CBC_CMD(msg=False))
 
     results = routes.copy()
     results["assigned_flights"] = [value(route_vars[r]) for r in routes["route"]]

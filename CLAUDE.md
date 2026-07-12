@@ -15,7 +15,7 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
 - Var olan kod stiline uy: değişken/fonksiyon isimleri karışık (bazı yerler İngilizce, kod içi açıklamalar ve print mesajları Türkçe) — bu tutarlılığı koru.
 - Her görev bitince Git'e anlamlı, Türkçe bir commit mesajıyla kaydet.
 
-## Mevcut Durum (Seviye 1-3 Tamamlandı)
+## Mevcut Durum (Seviye 1-3 Tamamlandı, Seviye 4 Görev 1 Tamamlandı)
 
 **Klasör yapısı:** `src/` (kod), `data/` (üretilen veri, `.gitignore`'da — Git'e girmez), `docs/` (RAG kaynak dokümanları, versiyonlanır), `notebooks/`, `tests/` (henüz boş).
 
@@ -38,10 +38,15 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
   - Kalan bilinen sınırlama: agent'ın genel sentez cevapları (örn. optimizasyon sonucunu özetlerken) bazen sayısal detayları atlayıp genel geçer cümleler kuruyor — yanlış değil ama az detaylı. Seviye 4'te model değişimiyle (Groq/Gemini) yeniden değerlendirilebilir.
 - `src/app.py` — Streamlit sohbet arayüzü, `agent.py`'deki `soru_sor`'u çağırıyor. `streamlit run src/app.py` ile başlatılır (proje kökünden çalıştırılmalı — göreli veri yolları buna göre). `streamlit.testing.v1.AppTest` ile uçtan uca doğrulandı (gerçek tarayıcı yerine).
 
+**Seviye 4 — MCP + Backend + LLMOps (Görev 1 tamamlandı):**
+- `src/mcp_server.py` — `FastMCP` ile aynı iki tool'u (`bilgi_sorgula`, `kapasite_optimizasyonu_calistir`) MCP protokolü üzerinden dışa açıyor. `mcp.client.stdio` ile uçtan uca test edildi (tool listesi + her iki tool çağrısı).
+- `optimize_routes.py` ve `rag_query.py`'deki `data/...` yolları artık `Path(__file__).resolve().parent.parent` ile proje köküne göre mutlak — MCP istemcisi (Claude Desktop gibi) script'i hangi cwd'den başlatırsa başlatsın doğru çalışır. Bunu `/tmp` dizininden çalıştırarak doğruladık.
+- `optimize_routes.py`: `prob.solve()` → `prob.solve(PULP_CBC_CMD(msg=False))` — CBC solver'ın stdout'a yazdığı log satırları MCP'nin JSON-RPC stdio akışını bozuyordu, `msg=False` ile susturuldu.
+- Claude Desktop config'e (`~/Library/Application Support/Claude/claude_desktop_config.json`) `mcpServers.aerocargo-copilot` eklendi (`.venv/bin/python` + `mcp_server.py` mutlak yollarla). Claude Desktop yeniden başlatılınca aktif olur.
+
 ## Kalan Yol Haritası
 
 ### Seviye 4 — MCP + Backend + LLMOps
-1. Optimizasyon ve RAG tool'larını bir MCP server olarak dışa aç (Claude Desktop'tan test edilebilir olsun).
 2. Agent'ı FastAPI backend'ine taşı (REST API + otomatik OpenAPI docs).
 3. Loglama (gecikme, token kullanımı) ve küçük bir eval seti (10-15 test sorusu) ekle.
 4. Ollama ile Groq/Gemini (ücretsiz katman) arasında config ile model değiştirilebilir hale getir.

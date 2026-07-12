@@ -1,9 +1,16 @@
+from pathlib import Path
+
 import chromadb
 from sentence_transformers import SentenceTransformer
 import ollama
 
+# Proje köküne göre mutlak yol: MCP gibi bu script'i hangi dizinden çalıştıracağı belli
+# olmayan istemcilerden çağrıldığında da (cwd her zaman proje kökü olmayabilir) doğru
+# data/chroma_db klasörünü bulabilsin diye.
+PROJE_KOKU = Path(__file__).resolve().parent.parent
+
 model = SentenceTransformer("all-MiniLM-L6-v2")
-client = chromadb.PersistentClient(path="data/chroma_db")
+client = chromadb.PersistentClient(path=str(PROJE_KOKU / "data" / "chroma_db"))
 collection = client.get_or_create_collection("aerocargo_docs")
 
 def soru_cevapla(soru):
