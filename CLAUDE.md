@@ -15,7 +15,7 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
 - Var olan kod stiline uy: değişken/fonksiyon isimleri karışık (bazı yerler İngilizce, kod içi açıklamalar ve print mesajları Türkçe) — bu tutarlılığı koru.
 - Her görev bitince Git'e anlamlı, Türkçe bir commit mesajıyla kaydet.
 
-## Mevcut Durum (Seviye 1-3 Tamamlandı, Seviye 4 Görev 1-5 Tamamlandı)
+## Mevcut Durum (Seviye 1-4 Tamamlandı)
 
 **Klasör yapısı:** `src/` (kod), `data/` (üretilen veri, `.gitignore`'da — Git'e girmez), `docs/` (RAG kaynak dokümanları, versiyonlanır), `notebooks/`, `tests/` (henüz boş).
 
@@ -58,11 +58,14 @@ Proje sahibi, Endüstri Mühendisliği + Data Analyst geçmişinden AI & Data + 
   - `train_forecast_model.py` artık her çalıştırıldığında iki modeli de eğitip en düşük MAE'ye sahip olanı otomatik `champion` alias'ına atıyor (MLflow'da deprecated olan Staging/Production stage'leri yerine önerilen yöntem) — `/forecast` hep bu alias'ı okuyor, "hangi versiyon en iyisiydi" elle takip edilmiyor.
   - Rota veri setinde (`route_features.csv`) zaten varsa gerçek `days_per_week`/popülerlik özellikleri kullanılıyor; yoksa `days_per_week` zorunlu (400 hatası döner) ve popülerlik, o havalimanının veri setindeki toplam uçuş sayısından (leave-one-out çıkarma yapılmadan, çünkü yeni rotanın kendi payı zaten sıfır) türetiliyor. Model `log1p(flight_count)` hedefiyle eğitildiği için tahmin `expm1` ile geri çevriliyor — bu adım atlanırsa tahminler log-ölçekte (çok küçük) çıkar.
   - **Bulunan/düzeltilen iki yan sorun:** (1) MLflow 3.x dosya tabanlı (`mlruns/`) tracking backend'i artık varsayılan olarak hataya çeviriyor (sqlite'a geçişi öneriyor) — proje sıfır-kurulum prensibini korumak için `MLFLOW_ALLOW_FILE_STORE=true` ile susturuldu (`train_forecast_model.py` ve `forecast_model.py`'nin en üstünde). (2) `api.py`'de `forecast_model` mutlaka `agent`'tan **önce** import edilmeli — `mlflow.pyfunc`'ın kullandığı `skops`, `transformers` paketi zaten yüklüyken (agent → rag_query → sentence_transformers zincirinde olduğu gibi) import edilirse `transformers`'ın lazy-loading mekanizmasına takılıp eksik `torchvision`'dan çöküyor; import sırasını tersine çevirmek yeni bağımlılık eklemeden bunu bypass ediyor.
+- `src/monitor_model.py` — basit model monitoring raporu (`python src/monitor_model.py`), iki sinyali birleştiriyor:
+  - **Performans:** Canlıda gerçek/etiketli talep verisi olmadığından (feedback loop kurulu değil), MLflow'a her `train_forecast_model.py` çalıştırmasında kaydedilen test-seti MAE'sini geçmiş versiyonlarla kıyaslıyor — champion'ın MAE'si geçmişteki en iyiden **%15'ten fazla** kötüyse işaretliyor.
+  - **Veri drift:** `forecast_model.py` artık her `/forecast` çağrısını `data/logs/forecast_log.jsonl`'a logluyor (agent_log.jsonl ile aynı JSONL deseni); bu isteklerin özellik dağılımı (days_per_week, origin/destination_popularity) eğitim verisiyle Kolmogorov-Smirnov testiyle (`scipy.stats.ks_2samp`) karşılaştırılıyor (en az 20 örnek gerekiyor, p<0.05 ise drift).
+  - Bilinçli tasarım kararı: script sadece rapor basıp "yeniden eğitim öneriliyor" diyor, **otomatik yeniden eğitmiyor** — eğitim/MLflow kaydı gibi bir yan etkiyi otomatikleştirmek riskli bulundu, karar kullanıcıda kalıyor. İki senaryo da (sağlıklı model / drift tespiti) manuel simülasyonla doğrulandı.
 
 ## Kalan Yol Haritası
 
-### Seviye 4 — MCP + Backend + LLMOps
-6. Model monitoring: tahmin hatası ve veri drift takibi + basit yeniden eğitim tetikleyici.
+Seviye 4 tamamlandı. Sırada Seviye 5 var (aşağıda).
 
 ### Seviye 5 — Production Görünümü
 1. Streamlit arayüzünü React (Vite + Tailwind) ile değiştir.
